@@ -1,5 +1,10 @@
 package threads;
 
+import threads.zoo.ZooController;
+
+import java.util.ArrayList;
+import java.util.Random;
+
 public class Animal implements Runnable {
     private int type; // animal type (r)
 
@@ -9,11 +14,21 @@ public class Animal implements Runnable {
     private Thread animal;
     private boolean alive;
 
+    private ZooController zooController;
 
-    public Animal(int type, int x, int y) {
+    // random object for finding the chance of moving an animal
+    private Random random;
+
+
+    public Animal(int type, int x, int y, ZooController zooController) {
         this.type = type;
         this.x = x;
         this.y = y;
+
+        this.zooController = zooController;
+
+        this.random = new Random();
+
         animal = new Thread(this);
     }
 
@@ -29,8 +44,46 @@ public class Animal implements Runnable {
     @Override
     public void run() {
         while (alive) {
-
+            int state = zooController.getZooState();
+            if (state == 2) {
+                move();
+            } else if (state == 3) {
+                waiting();
+            }
         }
+    }
+
+    private void waiting() {
+        try {
+            zooController.getTotalWaitingAnimals().addAndGet(1);
+            synchronized (zooController.getNotify()) {
+                zooController.getNotify().wait();
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            zooController.getTotalWaitingAnimals().addAndGet(-1);
+        }
+
+    }
+
+    private void move() {
+        zooController.getTotalWaitingAnimals().addAndGet(1);
+        float chanceOfMoving = random.nextFloat();
+        if (chanceOfMoving > 0.5) {
+            ArrayList<Cell> neighbors = zooController.
+                    getCellNeighbors(zooController.
+                            getZooTable()[y][x]);
+            int ran = random.nextInt(neighbors.size());
+            int newX = neighbors.get(ran).getX();
+            int newY = neighbors.get(ran).getY();
+            if (zooController.getZooTable()[newY][newX].moveIn(this)) {
+                zooController.getZooTable()[y][x].moveOut(this);
+                y = newY;
+                x = newX;
+            }
+        }
+        zooController.getTotalWaitingAnimals().addAndGet(-1);
     }
 
     public int getType() {

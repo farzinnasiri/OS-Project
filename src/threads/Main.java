@@ -3,6 +3,9 @@ package threads;
 import threads.zoo.Zoo;
 import threads.zoo.ZooController;
 
+import javax.swing.*;
+import java.awt.*;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -16,10 +19,13 @@ public class Main {
         boolean note2 = true;
 
         Zoo zoo = new Zoo(r, n, m, s, k, t, note1, note2);
-        ZooController zooController = new ZooController(zoo);
+        GUI gui = new GUI(n,m);
+        ZooController zooController = new ZooController(zoo,gui);
+
         zooController.start();
 
     }
 
-
 }
+
+

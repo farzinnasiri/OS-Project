@@ -18,6 +18,7 @@ public class Zoo {
     private boolean note1;
     private boolean note2;
 
+
     // The zoo table for keeping the animals
     private Cell[][] Table;
 
@@ -26,14 +27,16 @@ public class Zoo {
      state = 1, birth(beginning of time unit)
      state = 2, life(during the time unit)
      state = 3, death(end of time unit)
-     state = 4, drawing( zoo is closed!)
+     state = 4, displaying the table
     */
     AtomicInteger zooState;
 
     // binary semaphore(mutex) to lock the zoo!
     Semaphore zooMutexLock;
 
+    // is zoo open or not
     private boolean open;
+
 
     public Zoo(int r, int n, int m, int s, int k, int t, boolean note1, boolean note2) {
         this.r = r;
@@ -51,6 +54,28 @@ public class Zoo {
         zooState = new AtomicInteger(1); // ready to give birth!
 
     }
+
+
+    public Cell[][] getTable() {
+        return Table;
+    }
+
+    public void setTable(Cell[][] table) {
+        Table = table;
+    }
+
+    public int getState() {
+        return zooState.get();
+    }
+
+    public boolean setState(int newState) {
+        if (newState > 4 || newState < 1) {
+            return false;
+        }
+        zooState.set(newState);
+        return true;
+    }
+
 
     public boolean isOpen() {
         return open;
@@ -83,4 +108,6 @@ public class Zoo {
     public int getTimeUnit() {
         return t;
     }
+
+
 }
