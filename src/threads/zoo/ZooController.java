@@ -5,6 +5,8 @@ import threads.Cell;
 import threads.GUI;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ZooController implements Runnable {
@@ -32,6 +34,7 @@ public class ZooController implements Runnable {
 
         totalPopulation = new AtomicInteger();
         totalPopulation.set(zoo.getKinds() * zoo.getNumOfEachKind());
+        System.out.println("total pop: " + totalPopulation.get());
         // set total initial population
 
         notify = new Object();
@@ -62,9 +65,15 @@ public class ZooController implements Runnable {
 
     @Override
     public void run() {
+        //cycle of life!
         while (running && zoo.isOpen()) {
+            System.out.println("new cycle");
             updateScreen();
             birth();
+            life();
+            death();
+            System.out.println("cycle ended");
+
 
         }
 
@@ -78,6 +87,7 @@ public class ZooController implements Runnable {
                 notify.notifyAll();
             }
             waiting();
+            System.out.println("new screen");
             gui.refreshScreen(zoo.getTable());
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -98,15 +108,14 @@ public class ZooController implements Runnable {
                 notify.notifyAll();
             }
             waiting();
-
+            System.out.println("giving birth");
             for (Cell[] cells : zoo.getTable()) {
                 for (Cell cell : cells) {
                     totalPopulation.addAndGet(-cell.getAnimals().size());
-                    cell.breed();
+                    cell.breed(zoo.getTimeUnit());
                     totalPopulation.addAndGet(cell.getAnimals().size());
                 }
             }
-
 
             waiting();
         } catch (InterruptedException e) {
@@ -116,10 +125,114 @@ public class ZooController implements Runnable {
         }
     }
 
+    private void life() {
+        try {
+            zoo.zooMutexLock.acquire();
+            zoo.zooState.set(2);
+            synchronized (notify) {
+                notify.notifyAll();
+            }
+            System.out.println("now living");
+            synchronized (this) {
+                wait(zoo.getTimeUnit() * 1000);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            zoo.zooMutexLock.release();
+        }
+    }
+
+    private void death() {
+        try {
+            zoo.zooMutexLock.acquire();
+            zoo.zooState.set(3);
+            synchronized (notify) {
+                notify.notifyAll();
+            }
+            waiting();
+            System.out.println("now killing");
+            for (Cell[] cells : zoo.getTable()) {
+                for (Cell cell : cells) {
+                    totalPopulation.addAndGet(-cell.getAnimals().size());
+                    cell.killExtraAnimals();
+                    totalPopulation.addAndGet(cell.getAnimals().size());
+                }
+            }
+
+            startHunt();
+
+            synchronized (notify) {
+                notify.notifyAll();
+            }
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            zoo.zooMutexLock.release();
+        }
+    }
+
+    // starting the hunting process
+    // death value is (number of each kind * kind value)
+    private void startHunt() {
+        // get cells with animals inside
+        // for each cell find xy
+        // for each cell get all neighbors
+        // calculate xy of neighbors
+        // compare cell value with neighbors value
+        // if passed kill the cell!
+        List<Cell> fullCells = getTotalNoEmptyCells();
+        for (Cell fullCell : fullCells) {
+            List<Cell> neighbors = getCellNeighbors(fullCell);
+            int cellDeathValue = fullCell.getCellAnimalKind() * fullCell.getAnimals().size();
+            int[] deathValues = getDeathValue(neighbors); // int[r+1]
+            for (int r = 1; r < deathValues.length; r++) {
+                if (cellDeathValue < deathValues[r] && fullCell.getCellAnimalKind() != r) {
+                    totalPopulation.addAndGet(-fullCell.getAnimals().size());
+                    fullCell.killAllAnimals();
+                    break;
+                }
+            }
+
+        }
+
+    }
+
+    private int[] getDeathValue(List<Cell> neighbors) {
+        int[] deathValues = new int[zoo.getKinds() + 1]; // r+1 size
+        for (Cell neighbor : neighbors) {
+            deathValues[neighbor.getCellAnimalKind()] += neighbor.getCellAnimalKind() * neighbor.getAnimals().size();
+        }
+        return deathValues;
+
+    }
+
+    private List<Cell> getTotalNoEmptyCells() {
+        List<Cell> fullCells = new LinkedList<>();
+        for (Cell[] cells : zoo.getTable()) {
+            for (Cell cell : cells) {
+                if (cell.getAnimals().size() > 0) {
+                    fullCells.add(cell);
+                }
+            }
+        }
+        return fullCells;
+    }
+
 
     public void waiting() {
         while (totalMovingAnimals.get() > 0 ||
                 totalPopulation.get() != totalWaitingAnimals.get()) {
+            System.out.println(totalPopulation.get());
+            System.out.println(totalWaitingAnimals.get());
+            System.out.println(totalMovingAnimals.get());
+//            for (int i = 0; i < zoo.getTable().length; i++) {
+//                for (int j = 0; j < zoo.getTable()[0].length; j++) {
+//                    System.out.println(zoo.getTable()[i][j].getAnimals().size() +
+//                            " animals of type:" + zoo.getTable()[i][j].getCellAnimalKind());
+//                }
+//            }
             synchronized (this) {
                 try {
                     wait(15);
@@ -146,8 +259,8 @@ public class ZooController implements Runnable {
                 zoo.getTable()
                         [((i + 1) * zoo.getNumRows() / zoo.getKinds()) - 1]
                         [((j + 1) * zoo.getNumColumns() / zoo.getNumOfEachKind()) - 1]
-                        .moveIn(new Animal((i + 1), ((i + 1) * zoo.getNumRows() / zoo.getKinds()) - 1,
-                                ((j + 1) * zoo.getNumColumns() / zoo.getNumOfEachKind()) - 1,
+                        .moveIn(new Animal((i + 1), ((j + 1) * zoo.getNumColumns() / zoo.getNumOfEachKind()) - 1,
+                                ((i + 1) * zoo.getNumRows() / zoo.getKinds()) - 1,
                                 this));
             }
         }
@@ -190,10 +303,10 @@ public class ZooController implements Runnable {
         if (cell.getX() == zoo.getNumColumns() - 1 && j > cell.getX()) {
             return false;
         }
-        if (cell.getY() == 0 && j < cell.getY()) {
+        if (cell.getY() == 0 && i < cell.getY()) {
             return false;
         }
-        if (cell.getY() == zoo.getNumRows() - 1 && j > cell.getY()) {
+        if (cell.getY() == zoo.getNumRows() - 1 && i > cell.getY()) {
             return false;
         }
         return cell.getX() != j || cell.getY() != i;
@@ -202,5 +315,9 @@ public class ZooController implements Runnable {
 
     public Object getNotify() {
         return notify;
+    }
+
+    public int getTimeUnit() {
+        return zoo.getTimeUnit();
     }
 }

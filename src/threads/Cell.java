@@ -2,7 +2,7 @@ package threads;
 
 import threads.zoo.ZooController;
 
-import javax.swing.*;
+import java.util.Collections;
 import java.util.LinkedList;
 
 public class Cell {
@@ -11,7 +11,7 @@ public class Cell {
     private final int x, y;
 
     // every cell can contain only of kind of animal (r). if a cell is empty, any animal can enter
-    private int cellAnimalType;
+    private int cellAnimalKind;
     private int timePassed;
     private LinkedList<Animal> animals;
 
@@ -36,7 +36,7 @@ public class Cell {
 
     // to end all the animal threads that are currently inside this cell
     public void end() {
-        cellAnimalType = 0;
+        cellAnimalKind = 0;
         for (Animal animal : animals) {
             animal.end();
         }
@@ -47,13 +47,13 @@ public class Cell {
     // move an animal to the cell
     public synchronized boolean moveIn(Animal animal) {
         // if no animal is in this cell, it can enter
-        if (cellAnimalType == 0) {
+        if (cellAnimalKind == 0) {
             timePassed = 0;
-            cellAnimalType = animal.getType();
+            cellAnimalKind = animal.getKind();
         }
         // animal with different type from the cell cant enter
-        if (animal.getType() == cellAnimalType) {
-            if (maxCapacity > cellAnimalType * (animals.size() + 1)) {
+        if (animal.getKind() == cellAnimalKind) {
+            if (maxCapacity > cellAnimalKind * (animals.size() + 1)) {
                 animals.add(animal);
                 return true;
             }
@@ -63,13 +63,13 @@ public class Cell {
 
     // move out an animal form the cell
     public synchronized boolean moveOut(Animal animal) {
-        if (animal.getType() == cellAnimalType) {
+        if (animal.getKind() == cellAnimalKind) {
             if (animals.size() - 1 > 0) {
                 animals.remove(animal);
                 return true;
             } else if (animals.size() - 1 == 0) {
                 animals.remove(animal);
-                cellAnimalType = 0;
+                cellAnimalKind = 0;
                 timePassed = 0;
                 return true;
             }
@@ -77,27 +77,48 @@ public class Cell {
         return false;
     }
 
-    public synchronized void breed() {
-        if (cellAnimalType == 0) {
+    public synchronized void breed(int timeUnit) {
+        if (cellAnimalKind == 0) {
             return;
         }
         // for every cell, every `i` time units breeding happens
         // this method is called every 1 time unit
-        timePassed += 1;
-        if (timePassed == cellAnimalType) {
+        if (timePassed >= cellAnimalKind) {
             timePassed = 0;
             Animal newAnimal;
-            for (int i = 0; i < animals.size(); i++) {
-                newAnimal = new Animal(cellAnimalType, x, y, zooController);
+            int size = animals.size();
+            for (int i = 0; i < size; i++) {
+                newAnimal = new Animal(cellAnimalKind, x, y, zooController);
                 newAnimal.start();
                 animals.add(newAnimal);
             }
+        } else {
+            timePassed += timeUnit;
         }
 
     }
 
-    public int getCellAnimalType() {
-        return cellAnimalType;
+    public void killAllAnimals() {
+        cellAnimalKind = 0;
+        for (Animal animal : animals) {
+            animal.end();
+        }
+        animals.clear();
+    }
+
+    public void killExtraAnimals() {
+        if (cellAnimalKind == 0) return;
+
+        int diff = animals.size() - maxCapacity / cellAnimalKind;
+        if (diff > 0) {
+            LinkedList<Animal> copy = new LinkedList<>(animals);
+            Collections.shuffle(copy);
+            animals = (LinkedList<Animal>) copy.subList(0, animals.size() - diff);
+        }
+    }
+
+    public int getCellAnimalKind() {
+        return cellAnimalKind;
     }
 
     public LinkedList<Animal> getAnimals() {
@@ -115,4 +136,6 @@ public class Cell {
     public int getY() {
         return y;
     }
+
+
 }

@@ -18,7 +18,7 @@ public class GUI extends JFrame {
                 add(labels[i][j]);
             }
         }
-        setSize(columns * 160, rows * 35);
+        setSize(columns * 160, rows * 45);
         setLocationRelativeTo(null);
         setVisible(true);
 
@@ -27,8 +27,16 @@ public class GUI extends JFrame {
     public void refreshScreen(Cell[][] table) {
         for (int i = 0; i < table.length; i++) {
             for (int j = 0; j < table[0].length; j++) {
-                labels[i][j].setText(table[i][j].getAnimals().size() +
-                        "animals type:" + table[i][j].getCellAnimalType());
+                String oldValue = labels[i][j].getText();
+                String newValue = table[i][j].getAnimals().size() +
+                        " animals of type: " + table[i][j].getCellAnimalKind();
+                if(!oldValue.equals(newValue)){
+//                    System.out.println(i +" "+ j);
+                    labels[i][j].setForeground(Color.RED);
+                }else{
+                    labels[i][j].setForeground(Color.BLACK);
+                }
+                labels[i][j].setText(newValue);
             }
         }
         repaint();

@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Random;
 
 public class Animal implements Runnable {
-    private int type; // animal type (r)
+    private int kind; // animal type (r)
 
     // animals current position
     private int x, y;
@@ -20,10 +20,11 @@ public class Animal implements Runnable {
     private Random random;
 
 
-    public Animal(int type, int x, int y, ZooController zooController) {
-        this.type = type;
+    public Animal(int kind, int x, int y, ZooController zooController) {
+        this.kind = kind;
         this.x = x;
         this.y = y;
+
 
         this.zooController = zooController;
 
@@ -47,7 +48,7 @@ public class Animal implements Runnable {
             int state = zooController.getZooState();
             if (state == 2) {
                 move();
-            } else if (state == 3) {
+            } else {
                 waiting();
             }
         }
@@ -86,8 +87,8 @@ public class Animal implements Runnable {
         zooController.getTotalWaitingAnimals().addAndGet(-1);
     }
 
-    public int getType() {
-        return type;
+    public int getKind() {
+        return kind;
     }
 
     public int getX() {
