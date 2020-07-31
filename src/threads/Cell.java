@@ -83,19 +83,26 @@ public class Cell {
         }
         // for every cell, every `i` time units breeding happens
         // this method is called every 1 time unit
-        if (timePassed >= cellAnimalKind) {
-            timePassed = 0;
-            Animal newAnimal;
-            int size = animals.size();
-            for (int i = 0; i < size; i++) {
-                newAnimal = new Animal(cellAnimalKind, x, y, zooController);
-                newAnimal.start();
-                animals.add(newAnimal);
+        if (zooController.isNote3()) {
+            if (timePassed >= cellAnimalKind) {
+                duplicateAnimals();
+                timePassed = 0;
             }
-        } else {
-            timePassed += timeUnit;
+            return;
         }
+        duplicateAnimals();
 
+
+    }
+
+    private void duplicateAnimals() {
+        Animal newAnimal;
+        int size = animals.size();
+        for (int i = 0; i < size; i++) {
+            newAnimal = new Animal(cellAnimalKind, x, y, zooController);
+            newAnimal.start();
+            animals.add(newAnimal);
+        }
     }
 
     public void killAllAnimals() {
@@ -113,7 +120,7 @@ public class Cell {
         if (diff > 0) {
             LinkedList<Animal> copy = new LinkedList<>(animals);
             Collections.shuffle(copy);
-            animals = (LinkedList<Animal>) copy.subList(0, animals.size() - diff);
+            animals = new LinkedList<Animal>(copy.subList(0, animals.size() - diff));
         }
     }
 

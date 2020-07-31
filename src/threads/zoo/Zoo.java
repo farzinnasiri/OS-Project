@@ -17,6 +17,7 @@ public class Zoo {
     // notes! (تصبره ها)
     private boolean note1;
     private boolean note2;
+    private boolean note3;
 
 
     // The zoo table for keeping the animals
@@ -38,7 +39,7 @@ public class Zoo {
     private boolean open;
 
 
-    public Zoo(int r, int n, int m, int s, int k, int t, boolean note1, boolean note2) {
+    public Zoo(int r, int n, int m, int s, int k, int t, boolean note1, boolean note2, boolean note3) {
         this.r = r;
         this.n = n;
         this.m = m;
@@ -47,6 +48,7 @@ public class Zoo {
         this.t = t;
         this.note1 = note1;
         this.note2 = note2;
+        this.note3 = note3;
 
         // this binary semaphore will guarantee first-in first-out granting of permits under contention
         zooMutexLock = new Semaphore(1, true);
@@ -110,4 +112,15 @@ public class Zoo {
     }
 
 
+    public boolean isNote1() {
+        return note1;
+    }
+
+    public boolean isNote2() {
+        return note2;
+    }
+
+    public boolean isNote3() {
+        return note3;
+    }
 }
